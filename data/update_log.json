@@ -1,66 +1,6 @@
 {
- "run_at": "2026-11-24T21:48:27+05:30",
+ "run_at": "2026-11-24T21:54:07+05:30",
  "steps": [
-  {
-   "step": "bhavcopy 2026-11-16",
-   "ok": true,
-   "detail": "2998 rows, 0 adjustments"
-  },
-  {
-   "step": "indices 2026-11-16",
-   "ok": true,
-   "detail": ""
-  },
-  {
-   "step": "bhavcopy 2026-11-17",
-   "ok": true,
-   "detail": "2985 rows, 0 adjustments"
-  },
-  {
-   "step": "indices 2026-11-17",
-   "ok": true,
-   "detail": ""
-  },
-  {
-   "step": "bhavcopy 2026-11-18",
-   "ok": true,
-   "detail": "2981 rows, 0 adjustments"
-  },
-  {
-   "step": "indices 2026-11-18",
-   "ok": true,
-   "detail": ""
-  },
-  {
-   "step": "bhavcopy 2026-11-19",
-   "ok": true,
-   "detail": "2983 rows, 0 adjustments"
-  },
-  {
-   "step": "indices 2026-11-19",
-   "ok": true,
-   "detail": ""
-  },
-  {
-   "step": "bhavcopy 2026-11-20",
-   "ok": true,
-   "detail": "2980 rows, 0 adjustments"
-  },
-  {
-   "step": "indices 2026-11-20",
-   "ok": true,
-   "detail": ""
-  },
-  {
-   "step": "bhavcopy 2026-11-23",
-   "ok": true,
-   "detail": "2992 rows, 0 adjustments"
-  },
-  {
-   "step": "indices 2026-11-23",
-   "ok": true,
-   "detail": ""
-  },
   {
    "step": "bhavcopy 2026-11-24",
    "ok": true,
@@ -69,15 +9,8 @@
   {
    "step": "fii/dii",
    "ok": true,
-   "detail": "2026-11-23 FII +5,673 cr, DII -2,760 cr"
+   "detail": "2026-11-23 already stored"
   }
  ],
- "added": [
-  "2026-11-16",
-  "2026-11-17",
-  "2026-11-18",
-  "2026-11-19",
-  "2026-11-20",
-  "2026-11-23"
- ]
+ "added": []
 }
