@@ -1,5 +1,5 @@
-data/
-scripts/
-.github/
-requirements.txt
-README.md
+/data/
+/scripts/
+/.github/
+/requirements.txt
+/README.md
