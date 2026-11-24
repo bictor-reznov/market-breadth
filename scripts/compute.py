@@ -416,11 +416,13 @@ def main():
                        'rule': 'In place below the 30th percentile, mixed up to the 70th'})
     if flows.get('mtd'):
         fm, dm = flows['mtd']['fii'], flows['mtd']['dii']
-        checks.append({'signal': 'Foreign buyer (FII)', 'reading': f'FII net ₹{fm:+,.0f} cr this month ({flows["mtd"]["fii_buy_days"]} of {flows["mtd"]["days"]} sessions net buying)',
-                       'verdict': v3(fm > 0 and flows['mtd']['fii_buy_days'] >= 0.6 * flows['mtd']['days'], fm > 0),
+        few = flows['mtd']['days'] < 5
+        note_ = f" — only {flows['mtd']['days']} session(s) collected so far" if few else ''
+        checks.append({'signal': 'Foreign buyer (FII)', 'reading': f'FII net ₹{fm:+,.0f} cr this month ({flows["mtd"]["fii_buy_days"]} of {flows["mtd"]["days"]} sessions net buying){note_}',
+                       'verdict': v3(not few and fm > 0 and flows['mtd']['fii_buy_days'] >= 0.6 * flows['mtd']['days'], fm > 0),
                        'rule': 'In place when FIIs are net buyers on most sessions this month'})
-        checks.append({'signal': 'Domestic bid (DII)', 'reading': f'DII net ₹{dm:+,.0f} cr this month',
-                       'verdict': v3(dm > 0, dm > -0.25 * abs(fm or 1)), 'rule': 'In place when DIIs are net buyers this month'})
+        checks.append({'signal': 'Domestic bid (DII)', 'reading': f'DII net ₹{dm:+,.0f} cr this month{note_}',
+                       'verdict': v3(not few and dm > 0, dm > -0.25 * abs(fm or 1)), 'rule': 'In place when DIIs are net buyers this month'})
     tally = pd.Series([c['verdict'] for c in checks]).value_counts()
 
     # ================================================================ stocks.json
