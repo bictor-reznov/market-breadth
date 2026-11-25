@@ -184,8 +184,7 @@ tr:hover td{background:var(--surface-2)}
   <section class="card" id="sec-history">
     <div class="sec-h"><div><span class="eyebrow">Threshold guide</span><h2>What history says about these levels</h2>
       <p id="histSub">What the Nifty 50 did next after each breadth reading, 2012 to today.</p></div></div>
-    <div id="histVerdict" class="small" style="margin:-2px 0 14px"></div>
-    <div class="gauges" id="gauges"></div>
+    <div id="histVerdict" style="margin:-2px 0 6px;font-size:13px"></div>
     <div class="sec-h" style="margin:22px 0 8px"><div><h2 style="font-size:15px">Signals: what happened after each trigger</h2>
       <p>Each row is a breadth event at a fixed, round threshold. Medians and hit rates are Nifty 50 returns after it fired, against any random day.</p></div></div>
     <div class="scroll" style="max-height:none"><table id="sigTable"></table></div>
@@ -472,16 +471,10 @@ function renderHistory() {
                   ['p200', '% of stocks above 200-day EMA', 'Long-term participation'],
                   ['nh', '% of stocks near a 52-week high', 'Within 5% of the 52-week closing high']];
   const verdicts = [];
-  $('#gauges').innerHTML = gauges.map(([k, title, sub]) => { const zs = G.zones[k], v = cur[k];
-    const zi = zs.findIndex(z => v >= z.lo && v < z.hi), vz = zi >= 0 ? verdict(zs[zi]) : null;
-    if (vz) verdicts.push(`${title.replace('% of stocks ', '')} at <b>${fmt(v)}%</b>: <span style="color:var(${vz[2]});font-weight:700">${vz[1].toLowerCase()}</span> (next 6M median ${sgn(zs[zi].m6m)}, up ${zs[zi].w6m}%)`);
-    return `<div class="gauge"><h3>${title}</h3><div class="gnow">${sub}. Today <b class="num">${fmt(v)}%</b>${vz ? ` · <span class="edge" style="background:color-mix(in srgb,var(${vz[2]}) 18%,transparent)">${vz[1]}</span>` : ''}</div>
-      <table><thead><tr><th>Zone</th><th class="n">Next 6M</th><th class="n">Next 12M</th><th class="n" title="Share of days since 2012">Days</th></tr></thead><tbody>` +
-      zs.map((z, i) => { const vv = verdict(z); return `<tr class="${i === zi ? 'cur' : ''}"><td style="white-space:nowrap"><span class="dot" title="${vv[1]}" style="background:var(${vv[2]})"></span>${zl(z)}${i === zi ? ' <span style="color:var(--accent)">◀ today</span>' : ''}</td>
-        <td class="n"><b>${sgn(z.m6m)}</b><div class="muted">${z.w6m}% up</div></td>
-        <td class="n"><b>${sgn(z.m12m)}</b><div class="muted">${z.w12m}% up</div></td><td class="n muted">${z.share}%</td></tr>`; }).join('') +
-      `</tbody></table><div class="small muted" style="margin-top:6px"><span class="dot" style="background:var(--good)"></span>better · <span class="dot" style="background:var(--warning)"></span>about average · <span class="dot" style="background:var(--critical)"></span>worse than any day</div></div>`; }).join('');
-  $('#histVerdict').innerHTML = verdicts.length ? `<b>Reading today:</b> ${verdicts.join(' · ')}.` : '';
+  gauges.forEach(([k, title]) => { const zs = G.zones[k], v = cur[k], zi = zs.findIndex(z => v >= z.lo && v < z.hi);
+    if (zi < 0) return; const z = zs[zi], vz = verdict(z);
+    verdicts.push(`<li><b>${title}: ${fmt(v)}%</b> — in the past, from this level the Nifty rose a median <b>${sgn(z.m6m)}</b> over the next 6 months (up ${z.w6m}% of the time): <span style="color:var(${vz[2]});font-weight:700">${vz[1].toLowerCase()}</span>.</li>`); });
+  $('#histVerdict').innerHTML = verdicts.length ? `<b>Where we are today</b><ul style="margin:6px 0 0;padding-left:18px;line-height:1.7">${verdicts.join('')}</ul>` : '';
   const cell = s => s.median == null ? '<span class="muted">–</span>' : `${sgn(s.median)} <span class="muted small">${s.win}% up</span>`;
   const EDGE = {better: ['Better than average', '--good'], none: ['No clear edge', '--warning'], worse: ['Worse than average', '--critical']};
   const rows = G.signals.map(s => ({...s, n: s.stats['6m'].n}));
