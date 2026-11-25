@@ -2,9 +2,15 @@ name: Daily market data
 
 on:
   schedule:
-    # Mon–Fri 19:35 IST (14:05 UTC), retry at 21:35 IST in case NSE files were late
-    - cron: '5 14 * * 1-5'
-    - cron: '5 16 * * 1-5'
+    # GitHub's scheduler is best-effort and often runs late, so the job is attempted several
+    # times each evening (IST) plus a next-morning catch-up. Runs are idempotent: each one
+    # only adds trading days that are still missing.
+    - cron: '20 13 * * 1-5'   # 18:50 IST
+    - cron: '5 14 * * 1-5'    # 19:35 IST
+    - cron: '50 14 * * 1-5'   # 20:20 IST
+    - cron: '35 15 * * 1-5'   # 21:05 IST
+    - cron: '5 17 * * 1-5'    # 22:35 IST
+    - cron: '45 1 * * 2-6'    # 07:15 IST next morning (catch-up)
   workflow_dispatch:
   push:
     branches: [main]
