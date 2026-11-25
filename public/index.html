@@ -152,6 +152,7 @@ tr:hover td{background:var(--surface-2)}
       <a href="#sec-breadth">Breadth</a><a href="#sec-history">Thresholds</a><a href="#sec-regime">Scorecard</a><a href="#sec-flows">FII / DII</a>
       <a href="#sec-indices">Indices</a><a href="#sec-industry">Industries</a><a href="#sec-highs">52-week highs</a><a href="#sec-rs">RS rating</a>
     </nav>
+    <button class="btn" id="refreshBtn" title="Reload the latest data" style="flex:none;height:34px;display:inline-flex;align-items:center;gap:6px"><span id="refreshIc">↻</span> Refresh</button>
     <button class="iconbtn" id="themeBtn" title="Toggle dark mode" aria-label="Toggle dark mode">◐</button>
   </div>
 </header>
@@ -186,7 +187,7 @@ tr:hover td{background:var(--surface-2)}
       <p id="histSub">What the Nifty 50 did next after each breadth reading, 2012 to today.</p></div></div>
     <div id="histVerdict" style="margin:-2px 0 6px;font-size:13px"></div>
     <div class="sec-h" style="margin:22px 0 8px"><div><h2 style="font-size:15px">Signals: what happened after each trigger</h2>
-      <p>Each row is a breadth event at a fixed, round threshold. Medians and hit rates are Nifty 50 returns after it fired, against any random day.</p></div></div>
+      <p>Each row is a breadth event at a fixed, round threshold, and whether the Nifty 50 did better than on an average day after it fired.</p></div></div>
     <div class="scroll" style="max-height:none"><table id="sigTable"></table></div>
     <p class="small muted" id="histNote" style="margin:10px 0 0"></p>
   </section>
@@ -481,17 +482,15 @@ function renderHistory() {
   sortableTable($('#sigTable'), [
     {h: 'Signal', f: r => `<b>${esc(r.name)}</b><div class="small muted">${esc(r.rule)}</div>`},
     {h: 'Times fired', k: 'n', n: 1, f: r => r.stats['3m'].n},
-    {h: 'Next 3M', n: 1, f: r => cell(r.stats['3m'])}, {h: 'Next 6M', n: 1, f: r => cell(r.stats['6m'])}, {h: 'Next 12M', n: 1, f: r => cell(r.stats['12m'])},
     {h: 'vs any day', f: r => `<span class="edge" style="background:color-mix(in srgb,var(${EDGE[r.edge][1]}) 18%,transparent)">${EDGE[r.edge][0]}</span>`},
     {h: 'Last fired', f: r => r.last ? `${dfmt(r.last, {day: 'numeric', month: 'short', year: 'numeric'})}<div class="small ${r.active ? '' : 'muted'}">${r.active ? '<b style="color:var(--good)">● Active</b> · ' : ''}${r.since} sessions ago · Nifty ${sgn(r.nifty_since)} since</div>` : '<span class="muted">never</span>'}],
     rows);
-  $('#sigTable tbody').insertAdjacentHTML('beforeend', `<tr><td><b>Any day</b><div class="small muted">Benchmark: every trading day since ${dfmt(G.from, {month: 'short', year: 'numeric'})}</div></td><td class="n muted">–</td><td class="n">${cell(base['3m'])}</td><td class="n">${cell(base['6m'])}</td><td class="n">${cell(base['12m'])}</td><td></td><td></td></tr>`);
   $('#histNote').innerHTML = `Method: breadth is rebuilt for every day since 2012 on a point-in-time universe (${esc(G.universe)}). Returns are Nifty 50 price changes over the next 21, 63, 126 and 252 sessions. A signal counts again only after 40 sessions. "Active" means it fired in the last 3 months. ${esc(G.note)} Readings that sit in a zone for weeks overlap, so the effective sample is smaller than the day count.`;
 }
 
 // ---------- render everything
 async function init() {
-  const get = n => fetch(`data/${n}.json`, {cache: 'no-cache'}).then(r => r.json());
+  const get = n => fetch(`data/${n}.json?v=${Date.now()}`, {cache: 'no-store'}).then(r => r.json());
   [S, B, I, X, ST, F] = await Promise.all(['summary', 'breadth', 'industries', 'indices', 'stocks', 'flows'].map(get));
   G = await get('signals').catch(() => null);
 
@@ -606,6 +605,7 @@ async function init() {
   $('#foot').innerHTML = `<b>How this works.</b> Prices are NSE end-of-day files, adjusted for splits and bonuses, updated automatically after each session. Universe: ${esc(S.universe.rule)}, list refreshed weekly (last ${S.universe.list_asof ? dfmt(S.universe.list_asof, {day: 'numeric', month: 'short', year: 'numeric'}) : '–'}). EMA breadth counts only stocks with enough history for that average. "Near" a 52-week high or low means a close within 5% of the 52-week closing high or low. Index P/E is NSE's published trailing figure. FII/DII figures are NSE provisional cash-market data.<br>
   Breadth helps judge risk, not direction. Educational use only, not investment advice. Page generated ${esc(S.generated)}.`;
 }
+$('#refreshBtn').onclick = () => { $('#refreshIc').style.display = 'inline-block'; $('#refreshIc').animate([{transform: 'rotate(0)'}, {transform: 'rotate(360deg)'}], {duration: 600, iterations: Infinity}); location.reload(); };
 let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => S && renderCharts(), 150); });
 init().catch(e => { $('#headline').textContent = 'Could not load data'; $('#subhead').textContent = String(e); console.error(e); });
 </script>
