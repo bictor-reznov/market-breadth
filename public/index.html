@@ -473,7 +473,7 @@ function renderHistory() {
   const verdicts = [];
   gauges.forEach(([k, title]) => { const zs = G.zones[k], v = cur[k], zi = zs.findIndex(z => v >= z.lo && v < z.hi);
     if (zi < 0) return; const z = zs[zi], vz = verdict(z);
-    verdicts.push(`<li><b>${title}: ${fmt(v)}%</b> — in the past, from this level the Nifty rose a median <b>${sgn(z.m6m)}</b> over the next 6 months (up ${z.w6m}% of the time): <span style="color:var(${vz[2]});font-weight:700">${vz[1].toLowerCase()}</span>.</li>`); });
+    verdicts.push(`<li><b>${title}: ${fmt(v)}%</b> — <span style="color:var(${vz[2]});font-weight:700">${vz[1]}</span></li>`); });
   $('#histVerdict').innerHTML = verdicts.length ? `<b>Where we are today</b><ul style="margin:6px 0 0;padding-left:18px;line-height:1.7">${verdicts.join('')}</ul>` : '';
   const cell = s => s.median == null ? '<span class="muted">–</span>' : `${sgn(s.median)} <span class="muted small">${s.win}% up</span>`;
   const EDGE = {better: ['Better than average', '--good'], none: ['No clear edge', '--warning'], worse: ['Worse than average', '--critical']};
