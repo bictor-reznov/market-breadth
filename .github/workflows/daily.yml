@@ -38,6 +38,8 @@ jobs:
         run: python scripts/update.py
       - name: Compute dashboard data
         run: python scripts/compute.py
+      - name: Backtest breadth thresholds
+        run: python scripts/backtest.py
       - name: Commit
         run: |
           git config user.name "market-breadth-bot"

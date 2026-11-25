@@ -121,6 +121,19 @@ tr:hover td{background:var(--surface-2)}
 .count b{font-size:20px;color:var(--text-primary)}
 .hl{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .hl .tile .big{font-size:22px}
+.gauges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.gauge{border:1px solid var(--border);border-radius:10px;padding:12px 12px 8px;background:var(--surface-1)}
+.gauge h3{margin:0;font-size:13px}
+.gauge .gnow{font-size:12px;color:var(--text-secondary);margin:2px 0 8px}
+.gauge table{font-size:12px}
+.gauge td,.gauge th{padding:5px 6px}
+.gauge tr.cur td{background:var(--accent-soft);font-weight:600}
+.gauge tr.cur td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.mini{display:inline-block;vertical-align:middle;width:46px;height:6px;border-radius:3px;background:var(--surface-2);position:relative;margin-left:6px}
+.mini b{position:absolute;top:0;height:100%;border-radius:3px}
+.mini i{position:absolute;top:-2px;width:1px;height:10px;background:var(--text-muted)}
+.edge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
+@media (max-width:960px){.gauges{grid-template-columns:1fr}}
 .foot{color:var(--text-muted);font-size:12px;margin:24px 0 40px;line-height:1.6}
 .sym a{color:var(--text-primary);text-decoration:none;font-weight:600}
 .sym a:hover{color:var(--accent);text-decoration:underline}
@@ -136,7 +149,7 @@ tr:hover td{background:var(--surface-2)}
   <div class="bar">
     <div class="brand"><svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--s1)"/><path d="M6 22l6-7 5 4 9-11" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Market Breadth <small>NSE · end of day</small></div>
     <nav class="jump" aria-label="Sections">
-      <a href="#sec-breadth">Breadth</a><a href="#sec-regime">Scorecard</a><a href="#sec-flows">FII / DII</a>
+      <a href="#sec-breadth">Breadth</a><a href="#sec-history">Thresholds</a><a href="#sec-regime">Scorecard</a><a href="#sec-flows">FII / DII</a>
       <a href="#sec-indices">Indices</a><a href="#sec-industry">Industries</a><a href="#sec-highs">52-week highs</a><a href="#sec-rs">RS rating</a>
     </nav>
     <button class="iconbtn" id="themeBtn" title="Toggle dark mode" aria-label="Toggle dark mode">◐</button>
@@ -166,6 +179,17 @@ tr:hover td{background:var(--surface-2)}
       <p>Count of stocks within 5% of their 52-week closing high (up) or low (down), daily.</p></div></div>
     <div class="legend" id="hlLegend"></div>
     <div class="chart" id="hlChart"></div>
+  </section>
+
+  <section class="card" id="sec-history">
+    <div class="sec-h"><div><span class="eyebrow">Threshold guide</span><h2>What history says about these levels</h2>
+      <p id="histSub">What the Nifty 50 did next after each breadth reading, 2012 to today.</p></div></div>
+    <div id="histVerdict" class="small" style="margin:-2px 0 14px"></div>
+    <div class="gauges" id="gauges"></div>
+    <div class="sec-h" style="margin:22px 0 8px"><div><h2 style="font-size:15px">Signals: what happened after each trigger</h2>
+      <p>Each row is a breadth event at a fixed, round threshold. Medians and hit rates are Nifty 50 returns after it fired, against any random day.</p></div></div>
+    <div class="scroll" style="max-height:none"><table id="sigTable"></table></div>
+    <p class="small muted" id="histNote" style="margin:10px 0 0"></p>
   </section>
 
   <div class="grid2">
@@ -199,9 +223,6 @@ tr:hover td{background:var(--surface-2)}
       <p>Strength score 0–100 blends EMA trend, relative strength against the other indices and 52-week position. 70+ is outperforming, 30 or below underperforming.</p></div>
       <div class="row"><div class="seg" id="idxSeg"><button data-g="all" class="on">All</button><button data-g="Size">Size ladder</button><button data-g="Sector">Sectors</button></div></div></div>
     <div class="scroll" style="max-height:none"><table id="idxTable"></table></div>
-    <div class="sec-h" style="margin:22px 0 8px"><div><h2 style="font-size:15px">Valuation vs 10-year history</h2>
-      <p>Trailing P/E from NSE. Percentile is where today sits in the last ten years of daily readings. Lower means cheaper than usual.</p></div></div>
-    <div class="scroll" style="max-height:none"><table id="valTable"></table></div>
   </section>
 
   <section class="card" id="sec-industry">
@@ -272,7 +293,7 @@ const chip = st => { const s = STATUS[st]; if (!s) return '<span class="muted">�
     try { localStorage.setItem('theme', document.documentElement.dataset.theme); } catch (e) {}
     renderCharts(); }; })();
 
-let S, B, I, X, ST, F, RANGE = 252;
+let S, B, I, X, ST, F, G, RANGE = 252;
 
 // ---------- generic SVG helpers
 function svgEl(w, h) { return `<svg viewBox="0 0 ${w} ${h}" role="img" style="aspect-ratio:${w}/${h}">`; }
@@ -307,7 +328,9 @@ function breadthChart() {
   const ser = [['p20', '20-day EMA', '--s1'], ['p50', '50-day EMA', '--s7'], ['p200', '200-day EMA', '--s2']];
   let g = svgEl(W, H);
   [0, 25, 50, 75, 100].forEach(v => { g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" ${v === 50 ? 'stroke-dasharray="4 4" stroke="var(--border)"' : ''}/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${v}%</text>`; });
-  g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(60)}" y2="${y(60)}" stroke="var(--good)" stroke-opacity=".35" stroke-dasharray="2 4"/>${W >= 600 ? `<text x="${W - m.r + 4}" y="${y(60) - 4}" style="fill:var(--text-muted);font-size:10px">60% bull line</text>` : ''}`;
+  const TH = [[60, 'SOIC bull line: 200-day above 60%', '--text-muted'], [30, 'Long-term oversold: 200-day below 30%', '--s2'], [15, 'Washout zone: 20-day at 15% or below', '--s1']];
+  TH.forEach(([v, lab, c]) => { g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(${c})" stroke-opacity=".7" stroke-dasharray="5 4"/>`;
+    if (W >= 600) g += `<text x="${m.l + 6}" y="${y(v) - 4}" style="fill:var(${c === '--text-muted' ? '--text-muted' : c});font-size:10.5px;font-weight:600;paint-order:stroke;stroke:var(--surface-1);stroke-width:3px">${lab}</text>`; });
   // month ticks
   let lastM = ''; const every = n > 300 ? 3 : (n > 130 && W < 600) ? 2 : 1;
   data.forEach((d, i) => { const mm = d.d.slice(0, 7); if (mm !== lastM) { lastM = mm; const mo = +mm.slice(5);
@@ -339,7 +362,7 @@ function breadthChart() {
 // ---------- highs vs lows mirrored bars
 function hlChart() {
   const el = $('#hlChart'), data = B.series.slice(-Math.min(RANGE, 252)), W = Math.max(el.clientWidth || 1000, 320), H = W < 600 ? 160 : 200, m = {l: 34, r: W < 600 ? 74 : 92, t: 10, b: 12};
-  const iw = W - m.l - m.r, ih = H - m.t - m.b, n = data.length, mx = Math.max(...data.map(d => Math.max(d.nh, d.nl)), 10);
+  const iw = W - m.l - m.r, ih = H - m.t - m.b, n = data.length, mx = Math.max(...data.map(d => Math.max(d.nh, d.nl)), Math.round(0.33 * S.universe.stocks), 10);
   const bw = iw / n, mid = m.t + ih / 2, sc = v => v / mx * (ih / 2 - 2);
   let g = svgEl(W, H) + `<line x1="${m.l}" x2="${W - m.r}" y1="${mid}" y2="${mid}" stroke="var(--border)"/>`;
   ticksNice(0, mx, 3).filter(v => v > 0 && v <= mx).forEach(v => { g += `<line x1="${m.l}" x2="${W - m.r}" y1="${mid - sc(v)}" y2="${mid - sc(v)}" stroke="var(--grid)"/><line x1="${m.l}" x2="${W - m.r}" y1="${mid + sc(v)}" y2="${mid + sc(v)}" stroke="var(--grid)"/><text x="${m.l - 6}" y="${mid - sc(v) + 4}" text-anchor="end">${v}</text><text x="${m.l - 6}" y="${mid + sc(v) + 4}" text-anchor="end">${v}</text>`; });
@@ -347,7 +370,9 @@ function hlChart() {
   data.forEach((d, i) => { const xx = m.l + i * bw + gap / 2;
     if (d.nh) g += `<rect x="${xx}" y="${mid - sc(d.nh)}" width="${w}" height="${sc(d.nh)}" rx="${rr}" fill="var(--div-pos)"/>`;
     if (d.nl) g += `<rect x="${xx}" y="${mid}" width="${w}" height="${sc(d.nl)}" rx="${rr}" fill="var(--div-neg)"/>`; });
-  const L = data[n - 1];
+  const L = data[n - 1], thr = Math.round(0.3 * S.universe.stocks);
+  if (thr <= mx) { g += `<line x1="${m.l}" x2="${W - m.r}" y1="${mid - sc(thr)}" y2="${mid - sc(thr)}" stroke="var(--good)" stroke-dasharray="5 4"/>`;
+    if (W >= 600) g += `<text x="${m.l + 6}" y="${mid - sc(thr) - 4}" style="fill:var(--good);font-size:10.5px;font-weight:600;paint-order:stroke;stroke:var(--surface-1);stroke-width:3px">Broad new highs: ${thr}+ stocks (30%)</text>`; }
   g += `<text x="${W - m.r + 6}" y="${mid - 8}" style="fill:var(--text-primary);font-weight:600;font-size:12px">${L.nh} highs</text><text x="${W - m.r + 6}" y="${mid + 18}" style="fill:var(--text-primary);font-weight:600;font-size:12px">${L.nl} lows</text>`;
   g += `<line class="cross" y1="${m.t}" y2="${m.t + ih}" stroke="var(--text-muted)" style="opacity:0"/></svg>`;
   el.innerHTML = g;
@@ -430,10 +455,52 @@ const stockCols = extra => [
 ];
 const exportCols = [['Symbol', 's'], ['Name', 'n'], ['Industry', 'i'], ['Close', 'c'], ['1D %', 'r1d'], ['1M %', 'r1m'], ['3M %', 'r3m'], ['1Y %', 'r1y'], ['From 52W high %', 'dh'], ['RS', 'rs'], ['Score', 'sc'], ['Status', 'st'], ['Mcap Rs cr', 'mc'], ['P/E', 'pe']];
 
+// ---------- threshold guide (backtest)
+function renderHistory() {
+  const sec = $('#sec-history');
+  if (!G) { sec.style.display = 'none'; return; }
+  const base = G.baseline, t = Object.fromEntries(S.tiles.map(x => [x.key, x]));
+  const cur = {p20: t['Above 20-day EMA'].now, p200: t['Above 200-day EMA'].now, nh: t['Near 52-week high'].now / S.universe.stocks * 100};
+  const yrs = new Date(G.asof).getFullYear() - new Date(G.from).getFullYear();
+  $('#histSub').innerHTML = `What the Nifty 50 did next after each breadth reading, ${dfmt(G.from, {month: 'short', year: 'numeric'})} to today (${yrs} years). For comparison, after <b>any day</b> the next 6 months returned a median <b>${sgn(base['6m'].median)}</b> (up ${base['6m'].win}% of the time) and the next 12 months <b>${sgn(base['12m'].median)}</b> (up ${base['12m'].win}%).`;
+  const verdict = z => { const dx = z.m6m - base['6m'].median, dw = z.w6m - base['6m'].win;
+    return dx >= 2 && dw >= 5 ? ['better', 'Better than average', '--good'] : (dx <= -2 && dw <= -5) ? ['worse', 'Worse than average', '--critical'] : ['avg', 'About average', '--warning']; };
+  const zl = z => z.lo === 0 ? `Below ${z.hi}%` : z.hi >= 100 ? `${z.lo}%+` : `${z.lo}–${z.hi}%`;
+  const mini = (v, w) => { const lo = -6, hi = 16, pos = x => Math.max(0, Math.min(100, (x - lo) / (hi - lo) * 100)), z = pos(0);
+    return `<span class="mini" title="Median vs any day"><b style="left:${Math.min(z, pos(v))}%;width:${Math.abs(pos(v) - z)}%;background:var(${v >= base['6m'].median ? '--good' : '--critical'})"></b><i style="left:${pos(base['6m'].median)}%"></i></span>`; };
+  const gauges = [['p20', '% of stocks above 20-day EMA', 'Short-term: low readings mark selling exhaustion'],
+                  ['p200', '% of stocks above 200-day EMA', 'Long-term participation'],
+                  ['nh', '% of stocks near a 52-week high', 'Within 5% of the 52-week closing high']];
+  const verdicts = [];
+  $('#gauges').innerHTML = gauges.map(([k, title, sub]) => { const zs = G.zones[k], v = cur[k];
+    const zi = zs.findIndex(z => v >= z.lo && v < z.hi), vz = zi >= 0 ? verdict(zs[zi]) : null;
+    if (vz) verdicts.push(`${title.replace('% of stocks ', '')} at <b>${fmt(v)}%</b>: <span style="color:var(${vz[2]});font-weight:700">${vz[1].toLowerCase()}</span> (next 6M median ${sgn(zs[zi].m6m)}, up ${zs[zi].w6m}%)`);
+    return `<div class="gauge"><h3>${title}</h3><div class="gnow">${sub}. Today <b class="num">${fmt(v)}%</b>${vz ? ` · <span class="edge" style="background:color-mix(in srgb,var(${vz[2]}) 18%,transparent)">${vz[1]}</span>` : ''}</div>
+      <table><thead><tr><th>Zone</th><th class="n">Next 6M</th><th class="n">Next 12M</th><th class="n" title="Share of days since 2012">Days</th></tr></thead><tbody>` +
+      zs.map((z, i) => { const vv = verdict(z); return `<tr class="${i === zi ? 'cur' : ''}"><td style="white-space:nowrap"><span class="dot" title="${vv[1]}" style="background:var(${vv[2]})"></span>${zl(z)}${i === zi ? ' <span style="color:var(--accent)">◀ today</span>' : ''}</td>
+        <td class="n"><b>${sgn(z.m6m)}</b><div class="muted">${z.w6m}% up</div></td>
+        <td class="n"><b>${sgn(z.m12m)}</b><div class="muted">${z.w12m}% up</div></td><td class="n muted">${z.share}%</td></tr>`; }).join('') +
+      `</tbody></table><div class="small muted" style="margin-top:6px"><span class="dot" style="background:var(--good)"></span>better · <span class="dot" style="background:var(--warning)"></span>about average · <span class="dot" style="background:var(--critical)"></span>worse than any day</div></div>`; }).join('');
+  $('#histVerdict').innerHTML = verdicts.length ? `<b>Reading today:</b> ${verdicts.join(' · ')}.` : '';
+  const cell = s => s.median == null ? '<span class="muted">–</span>' : `${sgn(s.median)} <span class="muted small">${s.win}% up</span>`;
+  const EDGE = {better: ['Better than average', '--good'], none: ['No clear edge', '--warning'], worse: ['Worse than average', '--critical']};
+  const rows = G.signals.map(s => ({...s, n: s.stats['6m'].n}));
+  sortableTable($('#sigTable'), [
+    {h: 'Signal', f: r => `<b>${esc(r.name)}</b><div class="small muted">${esc(r.rule)}</div>`},
+    {h: 'Times fired', k: 'n', n: 1, f: r => r.stats['3m'].n},
+    {h: 'Next 3M', n: 1, f: r => cell(r.stats['3m'])}, {h: 'Next 6M', n: 1, f: r => cell(r.stats['6m'])}, {h: 'Next 12M', n: 1, f: r => cell(r.stats['12m'])},
+    {h: 'vs any day', f: r => `<span class="edge" style="background:color-mix(in srgb,var(${EDGE[r.edge][1]}) 18%,transparent)">${EDGE[r.edge][0]}</span>`},
+    {h: 'Last fired', f: r => r.last ? `${dfmt(r.last, {day: 'numeric', month: 'short', year: 'numeric'})}<div class="small ${r.active ? '' : 'muted'}">${r.active ? '<b style="color:var(--good)">● Active</b> · ' : ''}${r.since} sessions ago · Nifty ${sgn(r.nifty_since)} since</div>` : '<span class="muted">never</span>'}],
+    rows);
+  $('#sigTable tbody').insertAdjacentHTML('beforeend', `<tr><td><b>Any day</b><div class="small muted">Benchmark: every trading day since ${dfmt(G.from, {month: 'short', year: 'numeric'})}</div></td><td class="n muted">–</td><td class="n">${cell(base['3m'])}</td><td class="n">${cell(base['6m'])}</td><td class="n">${cell(base['12m'])}</td><td></td><td></td></tr>`);
+  $('#histNote').innerHTML = `Method: breadth is rebuilt for every day since 2012 on a point-in-time universe (${esc(G.universe)}). Returns are Nifty 50 price changes over the next 21, 63, 126 and 252 sessions. A signal counts again only after 40 sessions. "Active" means it fired in the last 3 months. ${esc(G.note)} Readings that sit in a zone for weeks overlap, so the effective sample is smaller than the day count.`;
+}
+
 // ---------- render everything
 async function init() {
   const get = n => fetch(`data/${n}.json`, {cache: 'no-cache'}).then(r => r.json());
   [S, B, I, X, ST, F] = await Promise.all(['summary', 'breadth', 'industries', 'indices', 'stocks', 'flows'].map(get));
+  G = await get('signals').catch(() => null);
 
   // hero
   const t = Object.fromEntries(S.tiles.map(x => [x.key, x])), p200 = t['Above 200-day EMA'].now, p20 = t['Above 20-day EMA'].now;
@@ -480,12 +547,7 @@ async function init() {
     {h: '1Y', k: 'r1y', n: 1, f: r => sgn(r.r1y)}, {h: 'From 52W high', k: 'from_high', n: 1, f: r => sgn(r.from_high)}];
   const idxT = sortableTable($('#idxTable'), idxCols, X.rows, ['score', -1]);
   document.querySelectorAll('#idxSeg button').forEach(b => b.onclick = () => { document.querySelectorAll('#idxSeg button').forEach(x => x.classList.toggle('on', x === b)); const gg = b.dataset.g; idxT.set(gg === 'all' ? X.rows : X.rows.filter(r => r.group === gg)); });
-  sortableTable($('#valTable'), [
-    {h: 'Index', k: 'name', f: r => `<b>${esc(r.name)}</b>`}, {h: 'P/E now', k: 'pe', n: 1, f: r => fmt(r.pe)},
-    {h: '10Y median', k: 'median10y', n: 1, f: r => fmt(r.median10y)},
-    {h: '10Y percentile', k: 'pctile10y', f: r => `<div class="scorebar"><span class="num" style="width:32px;text-align:right">${fmt(r.pctile10y, 0)}</span><div class="trk"><div class="fl" style="width:${r.pctile10y}%;background:var(${r.pctile10y <= 30 ? '--good' : r.pctile10y >= 70 ? '--critical' : '--warning'})"></div></div></div>`},
-    {h: '10Y range', n: 1, f: r => `<span class="small muted">${fmt(r.min10y)}–${fmt(r.max10y)}</span>`},
-    {h: 'P/E, 10 years', f: r => spark(r.spark, 120, 24)}], X.valuation, ['pctile10y', 1]);
+
 
   // industries
   const indAll = I.rows;
@@ -544,6 +606,8 @@ async function init() {
   $('#rsTv').onclick = e => copy(tvList(rsRows), e.target);
   $('#rsTvInd').onclick = e => copy(tvByInd(rsRows), e.target);
   $('#rsTxt').onclick = () => download(`rs-rating-${S.asof}-by-industry.txt`, tvByInd(rsRows));
+
+  renderHistory();
 
   // footer
   $('#foot').innerHTML = `<b>How this works.</b> Prices are NSE end-of-day files, adjusted for splits and bonuses, updated automatically after each session. Universe: ${esc(S.universe.rule)}, list refreshed weekly (last ${S.universe.list_asof ? dfmt(S.universe.list_asof, {day: 'numeric', month: 'short', year: 'numeric'}) : '–'}). EMA breadth counts only stocks with enough history for that average. "Near" a 52-week high or low means a close within 5% of the 52-week closing high or low. Index P/E is NSE's published trailing figure. FII/DII figures are NSE provisional cash-market data.<br>

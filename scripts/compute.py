@@ -409,11 +409,6 @@ def main():
                        'reading': f'Nifty Midcap 150 is {mid["from_3y_high"]:+.1f}% from its 3-year high',
                        'verdict': v3(mid['from_3y_high'] >= -0.5, mid['from_3y_high'] >= -5),
                        'rule': 'In place at a new high, mixed within 5%'})
-    if nval:
-        checks.append({'signal': 'Valuation cushion',
-                       'reading': f'Nifty 50 at {nval["pe"]}x, {nval["pctile10y"]:.0f}th percentile of 10 years (median {nval["median10y"]}x)',
-                       'verdict': v3(nval['pctile10y'] <= 30, nval['pctile10y'] <= 70),
-                       'rule': 'In place below the 30th percentile, mixed up to the 70th'})
     if flows.get('mtd'):
         fm, dm = flows['mtd']['fii'], flows['mtd']['dii']
         few = flows['mtd']['days'] < 5
