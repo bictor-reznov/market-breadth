@@ -1,23 +1,11 @@
 {
- "run_at": "2026-11-27T03:56:33+05:30",
+ "run_at": "2026-11-27T04:25:29+05:30",
  "steps": [
-  {
-   "step": "bhavcopy 2026-11-26",
-   "ok": true,
-   "detail": "2992 rows, 0 adjustments"
-  },
-  {
-   "step": "indices 2026-11-26",
-   "ok": true,
-   "detail": ""
-  },
   {
    "step": "fii/dii",
    "ok": true,
-   "detail": "2026-11-26 FII +5,843 cr, DII +5,631 cr"
+   "detail": "2026-11-26 already stored"
   }
  ],
- "added": [
-  "2026-11-26"
- ]
+ "added": []
 }
